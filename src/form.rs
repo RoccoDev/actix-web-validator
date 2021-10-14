@@ -1,5 +1,7 @@
-use actix_http::Payload;
-use actix_web::{dev::UrlEncoded, FromRequest, HttpRequest};
+use actix_web::{
+    dev::{Payload, UrlEncoded},
+    FromRequest, HttpRequest,
+};
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 use serde::de::DeserializeOwned;
@@ -103,7 +105,7 @@ impl<T> FromRequest for Form<T>
 where
     T: DeserializeOwned + Validate + 'static,
 {
-    type Error = actix_http::Error;
+    type Error = actix_web::Error;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
     type Config = FormConfig;
 
@@ -173,7 +175,7 @@ where
 #[derive(Clone)]
 pub struct FormConfig {
     limit: usize,
-    ehandler: Option<Rc<dyn Fn(Error, &HttpRequest) -> actix_http::Error>>,
+    ehandler: Option<Rc<dyn Fn(Error, &HttpRequest) -> actix_web::Error>>,
 }
 
 impl FormConfig {
@@ -186,7 +188,7 @@ impl FormConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
     where
-        F: Fn(Error, &HttpRequest) -> actix_http::Error + 'static,
+        F: Fn(Error, &HttpRequest) -> actix_web::Error + 'static,
     {
         self.ehandler = Some(Rc::new(f));
         self

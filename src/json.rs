@@ -3,7 +3,8 @@ use core::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use actix_web::dev::{JsonBody, Payload};
+use actix_http::Payload;
+use actix_web::dev::JsonBody;
 use actix_web::FromRequest;
 use actix_web::HttpRequest;
 use futures::future::{FutureExt, LocalBoxFuture};
@@ -133,7 +134,12 @@ where
             .map(|c| (c.limit, c.ehandler.clone(), c.content_type.clone()))
             .unwrap_or((32768, None, None));
 
-        JsonBody::new(req, payload, ctype)
+        let content_type = match ctype {
+            Some(ref p) => Some(p.as_ref()),
+            None => None,
+        };
+
+        JsonBody::new(req, payload, content_type)
             .limit(limit)
             .map(|res: Result<T, _>| match res {
                 Ok(data) => data.validate().map(|_| Json(data)).map_err(Error::from),
