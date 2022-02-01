@@ -107,13 +107,12 @@ where
 {
     type Error = actix_web::Error;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
-    type Config = FormConfig;
 
     #[inline]
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
         let req2 = req.clone();
         let (limit, error_handler) = req
-            .app_data::<Self::Config>()
+            .app_data::<FormConfig>()
             .map(|c| (c.limit, c.ehandler.clone()))
             .unwrap_or((16_384, None));
 

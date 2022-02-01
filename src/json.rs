@@ -124,22 +124,21 @@ where
 {
     type Error = actix_web::Error;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
-    type Config = JsonConfig;
 
     #[inline]
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
         let req2 = req.clone();
-        let (limit, err, ctype) = req
-            .app_data::<Self::Config>()
-            .map(|c| (c.limit, c.ehandler.clone(), c.content_type.clone()))
-            .unwrap_or((32768, None, None));
+        let (limit, err, ctype, ctype_required) = req
+            .app_data::<JsonConfig>()
+            .map(|c| (c.limit, c.ehandler.clone(), c.content_type.clone(), c.content_type_required))
+            .unwrap_or((32768, None, None, false));
 
         let content_type = match ctype {
             Some(ref p) => Some(p.as_ref()),
             None => None,
         };
 
-        JsonBody::new(req, payload, content_type)
+        JsonBody::new(req, payload, content_type, ctype_required)
             .limit(limit)
             .map(|res: Result<T, _>| match res {
                 Ok(data) => data.validate().map(|_| Json(data)).map_err(Error::from),
@@ -207,6 +206,7 @@ pub struct JsonConfig {
     limit: usize,
     ehandler: Option<Arc<dyn Fn(Error, &HttpRequest) -> actix_web::Error + Send + Sync>>,
     content_type: Option<Arc<dyn Fn(mime::Mime) -> bool + Send + Sync>>,
+    content_type_required: bool
 }
 
 impl JsonConfig {
@@ -233,6 +233,13 @@ impl JsonConfig {
         self.content_type = Some(Arc::new(predicate));
         self
     }
+
+    /// Set whether we require content type headers to be passed.
+    /// If this is false, the content will be parsed as JSON if it is missing.
+    pub fn content_type_required<F>(mut self, required: bool) -> Self {
+        self.content_type_required = required;
+        self
+    }
 }
 
 impl Default for JsonConfig {
@@ -241,6 +248,7 @@ impl Default for JsonConfig {
             limit: 32768,
             ehandler: None,
             content_type: None,
+            content_type_required: false
         }
     }
 }
